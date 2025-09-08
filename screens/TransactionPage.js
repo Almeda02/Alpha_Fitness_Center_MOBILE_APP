@@ -1,8 +1,15 @@
-import React from 'react';
-import { View, Text, StyleSheet,TouchableOpacity,Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet,TouchableOpacity,Image, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Icon from "react-native-vector-icons/Feather";
 
 export default function Transaction({ navigation }) {
+   const [statusOpen, setStatusOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState("Status");
+  const [search, setSearch] = useState("");
+
+  const statuses = ["Completed", "Pending"];
+
   return (
     <View style={styles.container}>
         {/* Header */}
@@ -35,16 +42,63 @@ export default function Transaction({ navigation }) {
 
           <View style={styles.Completedcolumn2}>
             <Text style={styles.CompletedText}>Completed</Text>
-            <Text style={styles.CompletedAmount}>12</Text>
+            <Text style={[styles.CompletedAmount,{color : '#22C55E'}]}>12</Text>
           </View>
 
           <View style={styles.Pendingcolumn3}>
             <Text style={styles.PendingText}>Pending</Text>
-            <Text style={styles.PendingAmount}>3</Text>
+            <Text style={[styles.PendingAmount, {color: '#DCB756'}]}>3</Text>
           </View>
 
         </View>
+
+        {/* Status Dropdown */}
+    <View style={styles.DDContainer}>    
+      <View style={styles.dropdownContainer}>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => setStatusOpen(!statusOpen)}
+        >
+          <Text style={styles.dropdownText}>{selectedStatus}</Text>
+          <Icon name="chevron-down" size={18} color="#555" />
+        </TouchableOpacity>
+
+        {statusOpen && (
+          <View style={styles.dropdownList}>
+            {statuses.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setSelectedStatus(item);
+                  setStatusOpen(false);
+                }}
+              >
+                <Text style={styles.dropdownItemText}>{item}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
+       {/* Search Input */}
+      <View style={styles.searchContainer}>
+        <Icon name="search" size={18} color="#999" style={styles.searchIcon} />
+        <TextInput
+          style={styles.input}
+          placeholder="Filter Name"
+          placeholderTextColor="#999"
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
+    </View> 
+
+
+      </View>
+
+      
+
+     
         
       <View style={styles.navigation}>
               <TouchableOpacity  style={styles.navigationButton} onPress={() => navigation.navigate('Dashboard')}>
@@ -178,6 +232,80 @@ const styles = StyleSheet.create({
     fontFamily: 'RussoOne',
   },
 
+  /* Dropdown Container */
+  DDContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+    dropdownContainer: {
+    position: "relative",
+    width: 110,
+    marginRight: 10,
+    
+    
+  },
+  dropdownButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  dropdownList: {
+    position: "absolute",
+    top: 45,
+    width: "100%",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    elevation: 3,
+    zIndex: 999,
+  },
+  dropdownItem: {
+    padding: 10,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    backgroundColor: "#fff",
+    height: 40,
+  },
+  searchIcon: {
+    marginRight: 6,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
+    color: "#333",
+  },
+  
+
+
+
+
+
+
+
 
 
 
@@ -211,4 +339,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'RussoOne',
   },
+
+  
 });

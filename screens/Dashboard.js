@@ -1,56 +1,90 @@
 import React from 'react';
-import { View, Text, StyleSheet,TouchableOpacity,Image, } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BarChart } from 'react-native-chart-kit';
 
 export default function Dashboard({ navigation }) {
-  
+  const screenWidth = Dimensions.get('window').width;
+
+  // Example data for the bar chart
+  const data = {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    datasets: [
+      {
+        data: [5000, 8000, 6500, 7200, 9000, ],
+      },
+    ],
+  };
+
+  const chartConfig = {
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientTo: '#DBD6D6',
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(230, 57, 70, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    style: {
+      borderRadius: 10,
+    },
+    propsForLabels: {
+      fontFamily: 'RussoOne',
+      fontSize: 12
+    },
+    propsForDots: {
+      r: '5',
+      strokeWidth: '2',
+      stroke: '#E63946',
+    },
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient colors={['#1d3c49ea', '#1e3a46ea', '#0F2027']} style={styles.Header}>
-            <View style={styles.Logo}>
-                <Image source={require('../assets/ALPHAFIT_LOGO.png')} style={{height: 60, width: 60}} />
-            </View>
+        <View style={styles.Logo}>
+          <Image source={require('../assets/ALPHAFIT_LOGO.png')} style={{ height: 60, width: 60 }} />
+        </View>
 
-            <View style={styles.AlphaFitness}>
-              <View style={styles.AlphaFitnessRow}>
-                <Text style={[styles.AlphaFitnessText, {color: '#5B5B5B'}]}>ALPHA</Text>
-                <Text style={[styles.AlphaFitnessText, {color: '#E63946'}]}> FITNESS</Text>
-              </View>
-
-              <View style={styles.OwnerDashboard}>
-                <Text style={[styles.AlphaFitnessText, {fontSize: 10}]}>Owner Dashboard</Text>
-              </View>
-            </View>
+        <View style={styles.AlphaFitness}>
+          <View style={styles.AlphaFitnessRow}>
+            <Text style={[styles.AlphaFitnessText, { color: '#5B5B5B' }]}>ALPHA</Text>
+            <Text style={[styles.AlphaFitnessText, { color: '#E63946' }]}> FITNESS</Text>
+          </View>
+          <View style={styles.OwnerDashboard}>
+            <Text style={[styles.AlphaFitnessText, { fontSize: 10 }]}>Owner Dashboard</Text>
+          </View>
+        </View>
       </LinearGradient>
-      {/* Content  */}
+
+      {/* Content */}
       <View style={styles.Content}>
         <Text style={styles.OverView}>Quick Overview</Text>
 
-      {/* Revenue */}
+        {/* Revenue */}
         <View style={styles.RevenueContainer}>
           <View style={styles.Revenuecolumn1}>
             <Text style={styles.RevenueText}>Total Revenue</Text>
-            <Text style={styles.Revenue}>$1,000.00</Text>
+            <Text style={styles.Revenue}>₱1,000.00</Text>
           </View>
           <View style={styles.Revenuecolumn2}>
             <View style={styles.RevenueRow}>
-              <Text style={styles.RevenueLabel}>Precious Month  </Text> <Text style={styles.Current_Month}>₱42,100</Text>
+              <Text style={styles.RevenueLabel}>Previous Month </Text>
+              <Text style={styles.Current_Month}>₱42,100</Text>
             </View>
             <View style={styles.RevenueRow}>
-              <Text style={styles.RevenueLabel}>Revenue Change   </Text> <Text style={styles.Current_Month}>₱3,790 (9.0%)</Text>
+              <Text style={styles.RevenueLabel}>Revenue Change </Text>
+              <Text style={styles.Current_Month}>₱3,790 (9.0%)</Text>
             </View>
-
             <TouchableOpacity style={styles.ExportButton}>
               <Text style={styles.ExportButtonText}>Export Data</Text>
             </TouchableOpacity>
           </View>
         </View>
-        {/* Members and Sales */}
+
+        {/* Members & Sales */}
         <View style={styles.MembersSalesContainer}>
           <View style={styles.MembersRow1}>
             <View style={styles.MembersSalesRow}>
-              <Image source={require('../assets/Members.png')} style={{height: 50, width: 50, marginRight: 5}} />
+              <Image source={require('../assets/Members.png')} style={{ height: 50, width: 50, marginRight: 5 }} />
               <Text style={styles.Memberspercent}>+8.1</Text>
             </View>
             <View style={styles.MembersSalesRow1}>
@@ -59,41 +93,52 @@ export default function Dashboard({ navigation }) {
             </View>
           </View>
 
-          <View style={styles.Salesrow}> 
-              <View style={styles.SalesRow1}>
-                <Image source={require('../assets/Sales.png')} style={{height: 50, width: 50, marginRight: 5}} />
-                
-              </View>
-              <View style={styles.SalesRow1}>
-                <Text style={styles.SalesText}>Today's Sales</Text>
-                <Text style={styles.Sales}>42</Text>
-              </View>
+          <View style={styles.Salesrow}>
+            <View style={styles.SalesRow1}>
+              <Image source={require('../assets/Sales.png')} style={{ height: 50, width: 50, marginRight: 5 }} />
             </View>
+            <View style={styles.SalesRow1}>
+              <Text style={styles.SalesText}>Today's Sales</Text>
+              <Text style={styles.Sales}>42</Text>
+            </View>
+          </View>
         </View>
 
-      <Text style={styles.Trend}>Revenue Trend</Text>
-
+        {/* Revenue Trend */}
+        <Text style={styles.Trend}>Revenue Trend</Text>
         <View style={styles.TableTrend}>
-          
+          <BarChart
+            data={data}
+            width={screenWidth - 42} // Adjusted for padding
+            height={220}
+            yAxisLabel="₱"
+            chartConfig={chartConfig}
+            verticalLabelRotation={0}
+            withInnerLines={true}
+            style={{
+              marginVertical: 0,
+              borderRadius: 9,
+            }}
+          />
         </View>
       </View>
 
       {/* Navigation */}
       <View style={styles.navigation}>
-        <TouchableOpacity  style={styles.navigationButton} onPress={() => navigation.navigate('Dashboard')}>
-          <Image source={require('../assets/Dashboard.png')} style={{height: 20, width: 30}} />
+        <TouchableOpacity style={styles.navigationButton} onPress={() => navigation.navigate('Dashboard')}>
+          <Image source={require('../assets/Dashboard.png')} style={{ height: 20, width: 30 }} />
           <Text style={styles.navigationText}>Dashboard</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navigationButton} onPress={() => navigation.navigate('Transactions')}>
-          <Image source={require('../assets/Transaction.png')} style={{height: 22, width: 30}} />
-          <Text style={[styles.navigationText, {marginTop: 7}]}>Transactions</Text>
+          <Image source={require('../assets/Transaction.png')} style={{ height: 22, width: 30 }} />
+          <Text style={[styles.navigationText, { marginTop: 7 }]}>Transactions</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navigationButton} onPress={() => navigation.navigate('Analytics')}>
-          <Image source={require('../assets/Analytics.png')} style={{height: 18, width: 40}} />
+          <Image source={require('../assets/Analytics.png')} style={{ height: 18, width: 40 }} />
           <Text style={styles.navigationText}>Analytics</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navigationButton} onPress={() => navigation.navigate('Members')}>
-          <Image source={require('../assets/MembersNav.png')} style={{height: 20, width: 30}} />
+          <Image source={require('../assets/MembersNav.png')} style={{ height: 20, width: 30 }} />
           <Text style={styles.navigationText}>Members</Text>
         </TouchableOpacity>
       </View>
@@ -152,10 +197,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    elevation: 5,
     borderWidth: 2,
     borderColor: '#00000067',
-    borderRadius: 10,
     padding: 10,
     
   },
@@ -210,12 +256,12 @@ const styles = StyleSheet.create({
   },
   MembersRow1: {
     flexDirection: 'row',
-    marginRight: 10,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    elevation: 5,
     borderWidth: 2,
     borderColor: '#00000067',
-    borderRadius: 10,
-    padding : 10,
-    paddingBottom: -5
+    padding: 6
   },
   MembersSalesRow: {
     
@@ -247,10 +293,12 @@ const styles = StyleSheet.create({
   Salesrow: {
     
     flexDirection: 'row',
-    marginRight: 10,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    elevation: 5,
     borderWidth: 2,
     borderColor: '#00000067',
-    borderRadius: 10,
+    padding: 3,
     padding : 10, 
     
   },
@@ -277,18 +325,30 @@ const styles = StyleSheet.create({
     fontFamily: 'RussoOne',
   },
 
+  /*TABLE GRAPH*/
+  TableTrend: {
+    marginTop: 20,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#00000067',
+  },
+
   /* Navigation */
   navigation: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    margin:20,
-    marginBottom: 20,
-    fontSize: 20,
     fontFamily: 'RussoOne',
+    fontSize: 20,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    elevation: 5,
     borderWidth: 2,
     borderColor: '#00000067',
-    borderRadius: 30,
-    padding:10,
+    padding: 10,
+    marginBottom: 20,
+    margin: 10
   },
   navigationButton: {
     justifyContent: 'center',
