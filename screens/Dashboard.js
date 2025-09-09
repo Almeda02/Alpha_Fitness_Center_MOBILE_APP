@@ -203,6 +203,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#00000067',
     padding: 10,
+    marginTop: 20,
     
   },
   Revenuecolumn1: {
@@ -320,14 +321,14 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   Trend : {
-    marginTop: 10,
+    marginTop: 30,
     fontSize: 20,
     fontFamily: 'RussoOne',
   },
 
   /*TABLE GRAPH*/
   TableTrend: {
-    marginTop: 20,
+    marginTop: 15,
     backgroundColor: '#fff',
     borderRadius: 10,
     elevation: 5,
