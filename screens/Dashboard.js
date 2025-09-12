@@ -338,18 +338,19 @@ const styles = StyleSheet.create({
 
   /* Navigation */
   navigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    fontFamily: 'RussoOne',
-    fontSize: 20,
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    elevation: 5,
-    borderWidth: 2,
-    borderColor: '#00000067',
+    position: "absolute",
+    bottom: 15,
+    right: 10,
+    left: 10,
+    zIndex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderWidth: 0,
+    borderColor: "#00000067",
+    borderRadius: 30,
     padding: 10,
-    marginBottom: 20,
-    margin: 10
+    borderWidth: 1,
   },
   navigationButton: {
     justifyContent: 'center',
