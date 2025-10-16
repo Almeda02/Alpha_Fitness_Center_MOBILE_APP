@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
+
 export default function MemberPage({ navigation }) {
   return (
     <View style={styles.container}>
@@ -39,7 +40,7 @@ export default function MemberPage({ navigation }) {
 
         {/* Cards Row */}
         <View style={styles.cardsRow}>
-          <View style={styles.memberCard}>\
+          <View style={styles.memberCard}>
             <View style={styles.memberCardColumn1}>
               <Image
               source={require("../assets/MemberRed.png")}
@@ -62,7 +63,7 @@ export default function MemberPage({ navigation }) {
               <Text style={styles.cardGrowth}>+8.1%</Text>
             </View>
             <View style={styles.memberCardColumn2}>
-              <Text style={styles.cardLabel}>Total Members</Text>
+              <Text style={styles.cardLabel}>Active Members</Text>
               <Text style={styles.cardValue}>342</Text>
             </View>
           </View>
@@ -201,6 +202,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "center",
     marginTop: 10,
+    
   },
   cardIcon: { marginRight: 10 },
   cardLabel: { fontSize: 13, color: "#444",fontFamily: "Calibribold" },

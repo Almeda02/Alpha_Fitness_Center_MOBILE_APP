@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     marginHorizontal: 5,
-  },
+   },
 
   // Navigation
   navigation: {

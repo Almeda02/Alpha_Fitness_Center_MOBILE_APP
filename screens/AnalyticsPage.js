@@ -2,45 +2,42 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BarChart, PieChart } from "react-native-chart-kit";
-import { Picker } from "@react-native-picker/picker"; // install this
+import { Picker } from "@react-native-picker/picker";
 
 export default function AnalyticsPage({ navigation }) {
   const [selectedRange, setSelectedRange] = useState("6months");
   const screenWidth = Dimensions.get("window").width;
 
-  // Example revenue data
-  const barData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-      {
-        data: [45000, 52000, 47000, 61000, 55000, 67000],
-      },
-    ],
+  // ✅ Create different datasets based on range
+  const getBarData = () => {
+    switch (selectedRange) {
+      case "6months":
+        return {
+          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+          datasets: [{ data: [45000, 52000, 47000, 61000, 55000, 67000] }],
+        };
+      case "12months":
+        return {
+          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+          datasets: [{ data: [45000, 52000, 47000, 61000, 55000, 67000, 59000, 62000, 64000, 68000, 71000, 75000] }],
+        };
+      case "year":
+        return {
+          labels: ["2021", "2022", "2023", "2024", "2025"],
+          datasets: [{ data: [520000, 610000, 590000, 700000, 760000] }],
+        };
+      default:
+        return { labels: [], datasets: [{ data: [] }] };
+    }
   };
 
-  // Membership data
+  const barData = getBarData();
+
+  // Membership data (unchanged)
   const pieData = [
-    {
-      name: "Premium",
-      population: 45,
-      color: "#E63946",
-      legendFontColor: "#333",
-      legendFontSize: 12,
-    },
-    {
-      name: "Standard",
-      population: 35,
-      color: "#5B5B5B",
-      legendFontColor: "#333",
-      legendFontSize: 12,
-    },
-    {
-      name: "Basic",
-      population: 20,
-      color: "#F77F00",
-      legendFontColor: "#333",
-      legendFontSize: 12,
-    },
+    { name: "Premium", population: 45, color: "#E63946", legendFontColor: "#333", legendFontSize: 12 },
+    { name: "Standard", population: 35, color: "#5B5B5B", legendFontColor: "#333", legendFontSize: 12 },
+    { name: "Basic", population: 20, color: "#F77F00", legendFontColor: "#333", legendFontSize: 12 },
   ];
 
   return (
@@ -82,15 +79,16 @@ export default function AnalyticsPage({ navigation }) {
         </View>
 
         <Text style={styles.sectionTitle}>Revenue & Members</Text>
+       <ScrollView horizontal> 
         <BarChart
           data={barData}
-          width={screenWidth - 30}
+          width={700}
           height={220}
           chartConfig={chartConfig}
           verticalLabelRotation={0}
           style={styles.chart}
-          
         />
+        </ScrollView>
 
         <Text style={styles.sectionTitle}>Membership Distribution</Text>
         <PieChart
@@ -145,12 +143,7 @@ const styles = StyleSheet.create({
   AlphaFitnessRow: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
   OwnerDashboard: { flexDirection: "row", fontSize: 10 },
 
-  analyticsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
+  analyticsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   analyticsTitle: { fontSize: 18, fontWeight: "bold" },
   dropdownWrapper: {
     borderWidth: 1,
@@ -161,10 +154,8 @@ const styles = StyleSheet.create({
     width: 150,
   },
   picker: { height: 35, width: "100%" },
-
   sectionTitle: { fontSize: 16, fontWeight: "bold", marginVertical: 10 },
-  chart: { borderRadius: 10, marginBottom: 20,},
-
+  chart: { borderRadius: 10, marginBottom: 20 },
   navigation: {
     position: "absolute",
     bottom: 15,
@@ -182,4 +173,3 @@ const styles = StyleSheet.create({
   navigationButton: { justifyContent: "center", alignItems: "center" },
   navigationText: { marginTop: 10, fontSize: 10, color: "#0000007c", textAlign: "center", fontFamily: "RussoOne" },
 });
-3
