@@ -1,9 +1,42 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-
+import { supabase } from "../lib/supabase"; // ✅ import your Supabase client
 
 export default function MemberPage({ navigation }) {
+
+  const [totalMembers, setTotalMembers] = useState(0);
+  const [activeMembers, setActiveMembers] = useState(0);
+
+  useEffect(() => {
+    fetchTotalMembers();
+  }, []);
+
+  // ✅ Fetch total members from Supabase
+  const fetchTotalMembers = async () => {
+    const { count, error } = await supabase
+      .from("members")
+      .select("*", { count: "exact", head: true });
+
+    if (error) {
+      console.error("Error fetching total members:", error);
+    } else {
+      setTotalMembers(count);
+    }
+
+    // ✅ Fetch only active members
+    const { count: activeCount, error: activeError } = await supabase
+      .from("members")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "ACTIVE");
+
+    if (activeError) {
+      console.error("Error fetching active members:", activeError);
+    } else {
+      setActiveMembers(activeCount);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -50,7 +83,7 @@ export default function MemberPage({ navigation }) {
             </View>
             <View style={styles.memberCardColumn2}>
               <Text style={styles.cardLabel}>Total Members</Text>
-              <Text style={styles.cardValue}>342</Text>
+              <Text style={styles.cardValue}>{totalMembers}</Text>
             </View>
           </View>
 
@@ -64,7 +97,7 @@ export default function MemberPage({ navigation }) {
             </View>
             <View style={styles.memberCardColumn2}>
               <Text style={styles.cardLabel}>Active Members</Text>
-              <Text style={styles.cardValue}>342</Text>
+              <Text style={styles.cardValue}>{activeMembers}</Text>
             </View>
           </View>
         </View>
