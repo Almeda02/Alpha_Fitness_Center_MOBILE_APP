@@ -1,84 +1,94 @@
 import React, { useState } from 'react';
-import { View,
+import {
+  View,
   Text,
   TextInput,
   TouchableOpacity,
   Image,
   StyleSheet,
-  ScrollView,} from 'react-native';
+  ScrollView,
+  Alert
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-
 import Icon from 'react-native-vector-icons/FontAwesome';
-
 
 export default function SignInPage({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  
+
+  const handleSignIn = () => {
+    // ✅ Simple validation
+    if (email === "" && password === "") {
+      Alert.alert("Login Successful", "Welcome back, AlphaFitness!");
+      navigation.navigate("Dashboard");
+    } else {
+      Alert.alert("Login Failed", "Invalid username or password.");
+    }
+  };
+
   return (
-   <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       {/* Top Title */}
       <Text style={styles.title}>
         ALPHA <Text style={styles.titleHighlight}>FITNESS</Text>
       </Text>
 
-    <View style={styles.Graycontainer}>
-      
-      {/* Logo */}
-      <Image
-        source={require("../assets/ALPHAFIT_LOGO.png")} // Add your logo here
-        style={styles.logo}
-      />
+      <View style={styles.Graycontainer}>
+        {/* Logo */}
+        <Image
+          source={require("../assets/ALPHAFIT_LOGO.png")}
+          style={styles.logo}
+        />
 
-      {/* Owner Portal Label */}
-      <Text style={styles.portalText}>OWNER PORTAL</Text>
+        {/* Owner Portal Label */}
+        <Text style={styles.portalText}>OWNER PORTAL</Text>
 
-      {/* Email Input */}
-      <Text style={styles.label}>Email Address</Text>
-      <View style={styles.inputContainer}>
-        <Icon name="user" size={25} color="#aaa" style={styles.icon} /> 
-      <TextInput
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+        {/* Username Input */}
+        <Text style={styles.label}>Username</Text>
+        <View style={styles.inputContainer}>
+          <Icon name="user" size={25} color="#aaa" style={styles.icon} />
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            placeholder="Enter username"
+          />
+        </View>
+
+        {/* Password Input */}
+        <Text style={[styles.label, { marginTop: 15 }]}>Password</Text>
+        <View style={styles.inputContainer}>
+          <Icon name="lock" size={25} color="#aaa" style={styles.icon} />
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="Enter password"
+          />
+        </View>
+
+        {/* Remember Me */}
+        <TouchableOpacity
+          style={styles.rememberContainer}
+          onPress={() => setRememberMe(!rememberMe)}
+        >
+          <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]} />
+          <Text style={styles.rememberText}>Remember me</Text>
+        </TouchableOpacity>
+
+        {/* Sign In Button */}
+        <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
+          <Text style={styles.signInText}>Sign in</Text>
+        </TouchableOpacity>
+
+        {/* Forgot Password */}
+        <TouchableOpacity>
+          <Text style={styles.forgotPassword}>Forgot Password</Text>
+        </TouchableOpacity>
       </View>
-
-      {/* Password Input */}
-      <Text style={[styles.label, { marginTop: 15 }]}>Password</Text>
-      <View style={styles.inputContainer}>
-        <Icon name="lock" size={25} color="#aaa" style={styles.icon} /> 
-      <TextInput
-        style={styles.input}
-        
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      </View>
-
-      {/* Remember Me */}
-      <TouchableOpacity
-        style={styles.rememberContainer}
-        onPress={() => setRememberMe(!rememberMe)}
-      >
-        <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]} />
-        <Text style={styles.rememberText}>Remember me</Text>
-      </TouchableOpacity>
-
-      {/* Sign In Button */}
-      <TouchableOpacity style={styles.signInButton} onPress={() => navigation.navigate('Dashboard')}>
-        <Text style={styles.signInText}>Sign in</Text>
-      </TouchableOpacity>
-
-      {/* Forgot Password */}
-      <TouchableOpacity >
-        <Text style={styles.forgotPassword}>Forgot Password</Text>
-      </TouchableOpacity>
-    </View>
     </ScrollView>
   );
 }
@@ -88,18 +98,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: "#fff",
     alignItems: "center",
-    
     paddingTop: 70,
   },
   Graycontainer: {
     backgroundColor: "#cecece52",
-    width: "100%",  
+    width: "100%",
     padding: 20,
     borderRadius: 50,
     alignItems: "center",
     marginTop: 70,
-    paddingBottom: 50
-    
+    paddingBottom: 50,
   },
   title: {
     fontSize: 22,
@@ -136,11 +144,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    fontSize: 14,
     backgroundColor: "#fff",
     flexDirection: "row",
     alignItems: "center",
-    
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    fontSize: 14,
   },
   rememberContainer: {
     flexDirection: "row",

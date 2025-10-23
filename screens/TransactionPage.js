@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,75 +10,86 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
+import { supabase } from "../lib/supabase"; // ✅ make sure path is correct
 
 export default function Transaction({ navigation }) {
-  const [statusOpen, setStatusOpen] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [totalPaid, setTotalPaid] = useState(0); // ✅ new state for paid sum
   const [selectedStatus, setSelectedStatus] = useState("Status");
   const [search, setSearch] = useState("");
 
-  // Example data
-  const transactions = [
-    {
-      id: "1",
-      name: "Joshua",
-      membership: "Premium Membership",
-      price: "₱89.99",
-      date: "8/4/2025",
-      status: "Pending",
-    },
-    {
-      id: "2",
-      name: "John Doe",
-      membership: "Premium Membership",
-      price: "₱89.99",
-      date: "8/4/2025",
-      status: "Pending",
-    },
-    {
-      id: "3",
-      name: "Bryan",
-      membership: "Premium Membership",
-      price: "₱89.99",
-      date: "8/4/2025",
-      status: "Completed",
-    },
-    {
-      id: "4",
-      name: "Rocky",
-      membership: "Premium Membership",
-      price: "₱89.99",
-      date: "8/4/2025",
-      status: "Completed",
-    },
-    {
-      id: "5",
-      name: "Anne",
-      membership: "Premium Membership",
-      price: "₱89.99",
-      date: "8/4/2025",
-      status: "Completed",
-    },
-    {
-      id: "6",
-      name: "Jorie",
-      membership: "Premium Membership",
-      price: "₱89.99",
-      date: "8/4/2025",
-      status: "Completed",
-    },
-  ];
+  // ✅ Fetch transactions from Supabase
+  const fetchTransactions = async () => {
+    const { data, error } = await supabase
+      .from("members")
+      .select(
+        "id, fullname, vip_status, paymentstatus, createdAt, walkinpayment"
+      );
 
-  // Summary calculation
+    if (error) {
+      console.error("❌ Error fetching transactions:", error.message);
+      return;
+    }
+
+    // ✅ Format for display
+    const formatted = data.map((item) => ({
+      id: item.id,
+      name: item.fullname,
+      membership: item.vip_status || "N/A",
+      price: `₱${item.walkinpayment || 0}`,
+      date: new Date(item.createdAt).toLocaleDateString(),
+      status:
+        item.paymentstatus?.charAt(0).toUpperCase() +
+        item.paymentstatus?.slice(1),
+    }));
+
+    setTransactions(formatted);
+
+    // ✅ Compute total sum for "Paid" status
+    const today = new Date().toISOString().split("T")[0];
+    const todayRevenueSum = data
+      .filter(
+        (item) =>
+          item.paymentstatus &&
+          item.paymentstatus.toLowerCase() === "paid" &&
+          item.createdAt.split("T")[0] === today
+      )
+      .reduce((sum, item) => sum + (item.walkinpayment || 0), 0);
+
+    setTotalPaid(todayRevenueSum);
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+
+    // ✅ Real-time updates from Supabase
+    const subscription = supabase
+      .channel("members-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "members" },
+        () => fetchTransactions()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
+  // ✅ Summary calculation
   const totalRevenue = transactions.reduce(
     (sum, t) => sum + parseFloat(t.price.replace(/[₱,]/g, "")),
     0
   );
   const completedCount = transactions.filter(
-    (t) => t.status === "Completed"
+    (t) => t.status?.toLowerCase().includes("paid")
   ).length;
-  const pendingCount = transactions.filter((t) => t.status === "Pending").length;
+  const pendingCount = transactions.filter(
+    (t) => t.status?.toLowerCase().includes("pending")
+  ).length;
 
-  // Filtering
+  // ✅ Filtering logic
   const filteredTransactions = transactions.filter((t) => {
     const matchesStatus =
       selectedStatus === "Status" || t.status === selectedStatus;
@@ -86,6 +97,7 @@ export default function Transaction({ navigation }) {
     return matchesStatus && matchesSearch;
   });
 
+  // ✅ Render card
   const renderTransaction = ({ item }) => (
     <View style={styles.card}>
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -99,7 +111,7 @@ export default function Transaction({ navigation }) {
           <View
             style={[
               styles.statusBadge,
-              item.status === "Completed"
+              item.status === "PAID"
                 ? { backgroundColor: "#d1f5d3" }
                 : { backgroundColor: "#fbe4b4" },
             ]}
@@ -108,7 +120,7 @@ export default function Transaction({ navigation }) {
               style={{
                 fontSize: 12,
                 fontWeight: "600",
-                color: item.status === "Completed" ? "#2d8a42" : "#8a6d2d",
+                color: item.status === "PAID" ? "#2d8a42" : "#8a6d2d",
               }}
             >
               {item.status}
@@ -154,8 +166,8 @@ export default function Transaction({ navigation }) {
       <Text style={styles.TransactionTitle}>Transactions</Text>
       <View style={styles.summaryRow}>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Total Revenue:</Text>
-          <Text style={styles.summaryValue}>₱{totalRevenue.toLocaleString()}</Text>
+          <Text style={styles.summaryTitle}>Todays Paid Revenue:</Text>
+          <Text style={styles.summaryValue}>₱{totalPaid.toLocaleString()}</Text>
         </View>
         <View style={[styles.summaryCard, { backgroundColor: "#d1f5d3" }]}>
           <Text style={[styles.summaryValue, { color: "#2d8a42" }]}>
@@ -177,11 +189,11 @@ export default function Transaction({ navigation }) {
           style={styles.filterDropdown}
           onPress={() =>
             setSelectedStatus(
-              selectedStatus === "Completed"
-                ? "Pending"
-                : selectedStatus === "Pending"
+              selectedStatus === "PAID"
+                ? "PENDING"
+                : selectedStatus === "PENDING"
                 ? "Status"
-                : "Completed"
+                : "PAID"
             )
           }
         >
@@ -206,8 +218,6 @@ export default function Transaction({ navigation }) {
         renderItem={renderTransaction}
         contentContainerStyle={{ paddingBottom: 80 }}
       />
-
-     
 
       {/* Navigation */}
       <View style={styles.navigation}>
@@ -258,6 +268,7 @@ export default function Transaction({ navigation }) {
   );
 }
 
+// ✅ Styles
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
   Header: {
@@ -277,19 +288,17 @@ const styles = StyleSheet.create({
   OwnerDashboard: { flexDirection: "row", fontSize: 10 },
 
   TransactionTitle: {
-   fontSize: 15, 
-   fontFamily: "RussoOne",
-   marginTop: 20,
-   paddingHorizontal: 10
+    fontSize: 15,
+    fontFamily: "RussoOne",
+    marginTop: 20,
+    paddingHorizontal: 10,
   },
 
-  // Summary
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-around",
     marginTop: 15,
     paddingHorizontal: 10,
-
   },
   summaryCard: {
     flex: 1,
@@ -303,7 +312,6 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: 12, color: "#333" },
   summaryValue: { fontSize: 18, fontWeight: "bold", color: "#000" },
 
-  // Filters
   filterRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -328,8 +336,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 8,
   },
-
-  // Card
   card: {
     backgroundColor: "#fff",
     marginHorizontal: 15,
@@ -349,22 +355,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignSelf: "flex-end",
   },
-
-  // Pagination
-  pagination: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginVertical: 10,
-  },
-  pageButton: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 8,
-    borderRadius: 8,
-    marginHorizontal: 5,
-   },
-
-  // Navigation
   navigation: {
     position: "absolute",
     bottom: 15,
@@ -374,11 +364,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     backgroundColor: "#fff",
-    borderWidth: 0,
-    borderColor: "#00000067",
     borderRadius: 30,
     padding: 10,
     borderWidth: 1,
+    borderColor: "#00000067",
   },
   navigationButton: { justifyContent: "center", alignItems: "center" },
   navigationText: {

@@ -1,44 +1,109 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Dimensions,
+  ActivityIndicator,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { BarChart, PieChart } from "react-native-chart-kit";
+import { BarChart} from "react-native-chart-kit";
 import { Picker } from "@react-native-picker/picker";
+import { supabase } from "../lib/supabase"; // ✅ Your Supabase connection
 
 export default function AnalyticsPage({ navigation }) {
-  const [selectedRange, setSelectedRange] = useState("6months");
+  const [selectedRange, setSelectedRange] = useState("Week");
+  const [barData, setBarData] = useState({ labels: [], datasets: [{ data: [] }] });
+  const [loading, setLoading] = useState(false);
   const screenWidth = Dimensions.get("window").width;
 
-  // ✅ Create different datasets based on range
-  const getBarData = () => {
-    switch (selectedRange) {
-      case "6months":
-        return {
-          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-          datasets: [{ data: [45000, 52000, 47000, 61000, 55000, 67000] }],
-        };
-      case "12months":
-        return {
-          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-          datasets: [{ data: [45000, 52000, 47000, 61000, 55000, 67000, 59000, 62000, 64000, 68000, 71000, 75000] }],
-        };
-      case "year":
-        return {
-          labels: ["2021", "2022", "2023", "2024", "2025"],
-          datasets: [{ data: [520000, 610000, 590000, 700000, 760000] }],
-        };
-      default:
-        return { labels: [], datasets: [{ data: [] }] };
+  useEffect(() => {
+    fetchRevenueData(selectedRange);
+  }, [selectedRange]);
+
+  const fetchRevenueData = async (range) => {
+    setLoading(true);
+    const { data, error } = await supabase.from("members").select("createdAt, walkinpayment");
+
+    if (error) {
+      console.error("Supabase error:", error);
+      setLoading(false);
+      return;
     }
+
+    const grouped = groupDataByRange(data, range);
+    setBarData({
+      labels: grouped.labels,
+      datasets: [{ data: grouped.values }],
+    });
+    setLoading(false);
   };
 
-  const barData = getBarData();
+  const groupDataByRange = (data, range) => {
+    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  // Membership data (unchanged)
-  const pieData = [
-    { name: "Premium", population: 45, color: "#E63946", legendFontColor: "#333", legendFontSize: 12 },
-    { name: "Standard", population: 35, color: "#5B5B5B", legendFontColor: "#333", legendFontSize: 12 },
-    { name: "Basic", population: 20, color: "#F77F00", legendFontColor: "#333", legendFontSize: 12 },
-  ];
+    const result = {};
+    const now = new Date();
+
+    data.forEach((item) => {
+      const createdAt = new Date(item.createdAt);
+      const payment = item.walkinpayment || 0;
+
+      if (range === "Week") {
+        const dayName = createdAt.toLocaleDateString("en-US", { weekday: "short" });
+        result[dayName] = (result[dayName] || 0) + payment;
+      } else if (range === "Monthly") {
+        const monthName = createdAt.toLocaleDateString("en-US", { month: "short" });
+        result[monthName] = (result[monthName] || 0) + payment;
+      } else if (range === "Yearly") {
+        const year = createdAt.getFullYear().toString();
+        result[year] = (result[year] || 0) + payment;
+      }
+    });
+
+    // Fill missing labels with 0
+    if (range === "Week") {
+      return {
+        labels: weekdays,
+        values: weekdays.map((d) => result[d] || 0),
+      };
+    } else if (range === "Monthly") {
+      return {
+        labels: months,
+        values: months.map((m) => result[m] || 0),
+      };
+    } else if (range === "Yearly") {
+      // Sort years ascending
+      const years = Object.keys(result).sort();
+      return {
+        labels: years,
+        values: years.map((y) => result[y]),
+      };
+    }
+
+    return { labels: [], values: [] };
+  };
+
+  // Dynamic chart configuration
+  const maxValue = Math.max(...(barData.datasets[0]?.data || [0]));
+  const chartConfig = {
+    backgroundGradientFrom: "#ffffff",
+    backgroundGradientTo: "#ffffff",
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(230, 57, 70, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    barPercentage: 0.6,
+    propsForLabels: {
+      fontSize: 10,
+      dy: 8, // lower the labels (y-position)
+    },
+  };
+
+  
 
   return (
     <View style={styles.container}>
@@ -47,7 +112,6 @@ export default function AnalyticsPage({ navigation }) {
         <View style={styles.Logo}>
           <Image source={require("../assets/ALPHAFIT_LOGO.png")} style={{ height: 60, width: 60 }} />
         </View>
-
         <View style={styles.AlphaFitness}>
           <View style={styles.AlphaFitnessRow}>
             <Text style={[styles.AlphaFitnessText, { color: "#5B5B5B" }]}>ALPHA</Text>
@@ -61,46 +125,43 @@ export default function AnalyticsPage({ navigation }) {
 
       {/* Analytics Section */}
       <ScrollView style={{ flex: 1, padding: 15 }}>
-        {/* Top bar with title + dropdown */}
         <View style={styles.analyticsHeader}>
           <Text style={styles.analyticsTitle}>Analytics</Text>
           <View style={styles.dropdownWrapper}>
             <Picker
-              label="Select range"
               selectedValue={selectedRange}
               style={styles.picker}
               onValueChange={(itemValue) => setSelectedRange(itemValue)}
             >
-              <Picker.Item label="Last 6 months" value="6months" />
-              <Picker.Item label="Last 12 months" value="12months" />
-              <Picker.Item label="This year" value="year" />
+              <Picker.Item label="Week" value="Week" />
+              <Picker.Item label="Monthly" value="Monthly" />
+              <Picker.Item label="Yearly" value="Yearly" />
             </Picker>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Revenue & Members</Text>
-       <ScrollView horizontal> 
-        <BarChart
-          data={barData}
-          width={700}
-          height={220}
-          chartConfig={chartConfig}
-          verticalLabelRotation={0}
-          style={styles.chart}
-        />
-        </ScrollView>
+        <Text style={styles.sectionTitle}>Revenue (₱)</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#E63946" />
+        ) : (
+          <ScrollView horizontal>
+            <BarChart
+              data={barData}
+              width={Math.max(barData.labels.length * 60, screenWidth - 40)}
+              height={220}
+              chartConfig={chartConfig}
+              fromZero
+              showValuesOnTopOfBars
+              verticalLabelRotation={0}
+              yAxisSuffix="₱"
+              yAxisInterval={1}
+              segments={5}
+              style={styles.chart}
+            />
+          </ScrollView>
+        )}
 
-        <Text style={styles.sectionTitle}>Membership Distribution</Text>
-        <PieChart
-          data={pieData}
-          width={screenWidth - 30}
-          height={200}
-          chartConfig={chartConfig}
-          accessor="population"
-          backgroundColor="transparent"
-          paddingLeft="10"
-          absolute
-        />
+        
       </ScrollView>
 
       {/* Navigation Bar */}
@@ -126,14 +187,6 @@ export default function AnalyticsPage({ navigation }) {
   );
 }
 
-const chartConfig = {
-  backgroundGradientFrom: "#ffffff",
-  backgroundGradientTo: "#ffffff",
-  decimalPlaces: 0,
-  color: (opacity = 1) => `rgba(230, 57, 70, ${opacity})`,
-  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-};
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
   Header: { flexDirection: "row", alignItems: "center", padding: 3, marginTop: 30 },
@@ -142,7 +195,6 @@ const styles = StyleSheet.create({
   AlphaFitnessText: { color: "#ffffff", textAlign: "center", fontFamily: "RussoOne" },
   AlphaFitnessRow: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
   OwnerDashboard: { flexDirection: "row", fontSize: 10 },
-
   analyticsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   analyticsTitle: { fontSize: 18, fontWeight: "bold" },
   dropdownWrapper: {

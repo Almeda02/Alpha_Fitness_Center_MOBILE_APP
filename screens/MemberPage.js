@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../lib/supabase"; // ✅ import your Supabase client
+import { PieChart } from "react-native-chart-kit";
+import { supabase } from "../lib/supabase"; // ✅ Your Supabase client
 
 export default function MemberPage({ navigation }) {
-
   const [totalMembers, setTotalMembers] = useState(0);
   const [activeMembers, setActiveMembers] = useState(0);
+  const [pieData, setPieData] = useState([]);
+  const screenWidth = Dimensions.get("window").width;
 
   useEffect(() => {
-    fetchTotalMembers();
+    fetchMemberData();
   }, []);
 
-  // ✅ Fetch total members from Supabase
-  const fetchTotalMembers = async () => {
+  const fetchMemberData = async () => {
+  try {
+    // ✅ Fetch total members
     const { count, error } = await supabase
       .from("members")
       .select("*", { count: "exact", head: true });
 
-    if (error) {
-      console.error("Error fetching total members:", error);
-    } else {
-      setTotalMembers(count);
-    }
+    if (error) throw error;
+    setTotalMembers(count || 0);
 
     // ✅ Fetch only active members
     const { count: activeCount, error: activeError } = await supabase
@@ -30,39 +30,91 @@ export default function MemberPage({ navigation }) {
       .select("*", { count: "exact", head: true })
       .eq("status", "ACTIVE");
 
-    if (activeError) {
-      console.error("Error fetching active members:", activeError);
-    } else {
-      setActiveMembers(activeCount);
-    }
+    if (activeError) throw activeError;
+    setActiveMembers(activeCount || 0);
+
+    // ✅ Fetch all members with their gymPlan
+    const { data: members, error: gymPlanError } = await supabase
+      .from("members")
+      .select("gymPlan");
+
+    if (gymPlanError) throw gymPlanError;
+
+    // ✅ Count each category
+    let vipCount = 0;
+    let nonCount = 0;
+    let walkinCount = 0;
+
+    members.forEach((m) => {
+      const plan = (m.gymPlan || "").toLowerCase().trim();
+
+      if (plan.includes("non") || plan === "non" || plan === "non") {
+        nonCount++;
+      } else if (plan.includes("vip")) {
+        vipCount++;
+      } else if (plan.includes("walk")) {
+        walkinCount++;
+      }
+    });
+
+    // ✅ Build chart data dynamically
+    const chartData = [
+      {
+        name: "VIP",
+        population: vipCount,
+        color: "#E63946",
+        legendFontColor: "#333",
+        legendFontSize: 12,
+      },
+      {
+        name: "Non-VIP",
+        population: nonCount,
+        color: "#5B5B5B",
+        legendFontColor: "#333",
+        legendFontSize: 12,
+      },
+      {
+        name: "Walk-in",
+        population: walkinCount,
+        color: "#F77F00",
+        legendFontColor: "#333",
+        legendFontSize: 12,
+      },
+    ];
+
+    setPieData(chartData);
+  } catch (err) {
+    console.error("Error fetching member data:", err);
+  }
+};
+
+
+  const chartConfig = {
+    backgroundGradientFrom: "#ffffff",
+    backgroundGradientTo: "#ffffff",
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(230, 57, 70, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    propsForLabels: {
+      fontSize: 10,
+      dy: 8, // lowers labels
+    },
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient
-        colors={["#1d3c49ea", "#1e3a46ea", "#0F2027"]}
-        style={styles.Header}
-      >
+      <LinearGradient colors={["#1d3c49ea", "#1e3a46ea", "#0F2027"]} style={styles.Header}>
         <View style={styles.Logo}>
-          <Image
-            source={require("../assets/ALPHAFIT_LOGO.png")}
-            style={{ height: 60, width: 60 }}
-          />
+          <Image source={require("../assets/ALPHAFIT_LOGO.png")} style={{ height: 60, width: 60 }} />
         </View>
         <View style={styles.AlphaFitness}>
           <View style={styles.AlphaFitnessRow}>
-            <Text style={[styles.AlphaFitnessText, { color: "#5B5B5B" }]}>
-              ALPHA
-            </Text>
-            <Text style={[styles.AlphaFitnessText, { color: "#E63946" }]}>
-              FITNESS
-            </Text>
+            <Text style={[styles.AlphaFitnessText, { color: "#5B5B5B" }]}>ALPHA</Text>
+            <Text style={[styles.AlphaFitnessText, { color: "#E63946" }]}>FITNESS</Text>
           </View>
           <View style={styles.OwnerDashboard}>
-            <Text style={[styles.AlphaFitnessText, { fontSize: 10 }]}>
-              Owner Dashboard
-            </Text>
+            <Text style={[styles.AlphaFitnessText, { fontSize: 10 }]}>Owner Dashboard</Text>
           </View>
         </View>
       </LinearGradient>
@@ -74,13 +126,7 @@ export default function MemberPage({ navigation }) {
         {/* Cards Row */}
         <View style={styles.cardsRow}>
           <View style={styles.memberCard}>
-            <View style={styles.memberCardColumn1}>
-              <Image
-              source={require("../assets/MemberRed.png")}
-              style={[styles.cardIcon, { width: 50, height: 50 }]}
-              />
-              <Text style={styles.cardGrowth}>+8.1%</Text>
-            </View>
+            <Image source={require("../assets/MemberRed.png")} style={[styles.cardIcon, { width: 50, height: 50 }]} />
             <View style={styles.memberCardColumn2}>
               <Text style={styles.cardLabel}>Total Members</Text>
               <Text style={styles.cardValue}>{totalMembers}</Text>
@@ -88,13 +134,7 @@ export default function MemberPage({ navigation }) {
           </View>
 
           <View style={styles.memberCard}>
-            <View style={styles.memberCardColumn1}>
-              <Image
-              source={require("../assets/Members.png")}
-              style={[styles.cardIcon, { width: 50, height: 50 }]}
-              />
-              <Text style={styles.cardGrowth}>+8.1%</Text>
-            </View>
+            <Image source={require("../assets/Members.png")} style={[styles.cardIcon, { width: 50, height: 50 }]} />
             <View style={styles.memberCardColumn2}>
               <Text style={styles.cardLabel}>Active Members</Text>
               <Text style={styles.cardValue}>{activeMembers}</Text>
@@ -102,74 +142,42 @@ export default function MemberPage({ navigation }) {
           </View>
         </View>
 
-        {/* Activity Section */}
+        {/* Pie Chart */}
         <View style={styles.activityCard}>
-          <Text style={styles.activityTitle}>Members Activity</Text>
-
-          <View style={styles.activityRow}>
-            <Text style={styles.activityLabel}>Peak hours</Text>
-            <Text style={styles.activityValue}>6-8 PM</Text>
-          </View>
-
-          <View style={styles.activityRow}>
-            <Text style={styles.activityLabel}>Average Session</Text>
-            <Text style={styles.activityValue}>1.2 Hours</Text>
-          </View>
-
-          <View style={styles.activityRow}>
-            <Text style={styles.activityLabel}>Most Popular</Text>
-            <Text style={styles.activityValue}>Weight Training</Text>
-          </View>
-
-          <View style={styles.activityRow}>
-            <Text style={styles.activityLabel}>Retention Rate</Text>
-            <Text style={styles.activityValue}>87%</Text>
-          </View>
+          <Text style={styles.activityTitle}>Membership Distribution</Text>
+          {pieData.length > 0 ? (
+            <PieChart
+              data={pieData}
+              width={screenWidth - 30}
+              height={200}
+              chartConfig={chartConfig}
+              accessor="population"
+              backgroundColor="transparent"
+              paddingLeft="10"
+              absolute
+            />
+          ) : (
+            <Text style={{ textAlign: "center", color: "#888" }}>Loading chart...</Text>
+          )}
         </View>
       </View>
 
-      {/* Navigation Bar */}
+      {/* Navigation */}
       <View style={styles.navigation}>
-        <TouchableOpacity
-          style={styles.navigationButton}
-          onPress={() => navigation.navigate("Dashboard")}
-        >
-          <Image
-            source={require("../assets/Dashboard.png")}
-            style={{ height: 20, width: 30 }}
-          />
+        <TouchableOpacity style={styles.navigationButton} onPress={() => navigation.navigate("Dashboard")}>
+          <Image source={require("../assets/Dashboard.png")} style={{ height: 20, width: 30 }} />
           <Text style={styles.navigationText}>Dashboard</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navigationButton}
-          onPress={() => navigation.navigate("Transactions")}
-        >
-          <Image
-            source={require("../assets/Transaction.png")}
-            style={{ height: 22, width: 30 }}
-          />
-          <Text style={[styles.navigationText, { marginTop: 7 }]}>
-            Transactions
-          </Text>
+        <TouchableOpacity style={styles.navigationButton} onPress={() => navigation.navigate("Transactions")}>
+          <Image source={require("../assets/Transaction.png")} style={{ height: 22, width: 30 }} />
+          <Text style={[styles.navigationText, { marginTop: 7 }]}>Transactions</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navigationButton}
-          onPress={() => navigation.navigate("Analytics")}
-        >
-          <Image
-            source={require("../assets/Analytics.png")}
-            style={{ height: 18, width: 40 }}
-          />
+        <TouchableOpacity style={styles.navigationButton} onPress={() => navigation.navigate("Analytics")}>
+          <Image source={require("../assets/Analytics.png")} style={{ height: 18, width: 40 }} />
           <Text style={styles.navigationText}>Analytics</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navigationButton}
-          onPress={() => navigation.navigate("Members")}
-        >
-          <Image
-            source={require("../assets/MembersNav.png")}
-            style={{ height: 20, width: 30 }}
-          />
+        <TouchableOpacity style={styles.navigationButton} onPress={() => navigation.navigate("Members")}>
+          <Image source={require("../assets/MembersNav.png")} style={{ height: 20, width: 30 }} />
           <Text style={styles.navigationText}>Members</Text>
         </TouchableOpacity>
       </View>
@@ -238,7 +246,7 @@ const styles = StyleSheet.create({
     
   },
   cardIcon: { marginRight: 10 },
-  cardLabel: { fontSize: 13, color: "#444",fontFamily: "Calibribold" },
+  cardLabel: { fontSize: 12.5, color: "#444",fontFamily: "Calibribold" },
   cardValue: { fontSize: 16, fontWeight: "bold" },
   cardGrowth: { fontSize: 12, color: "#22C55E", marginTop: 10, fontFamily: "AROneSansSemiBold" },
 
