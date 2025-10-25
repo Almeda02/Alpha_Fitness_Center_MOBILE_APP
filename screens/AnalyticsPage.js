@@ -10,9 +10,9 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { BarChart} from "react-native-chart-kit";
+import { BarChart } from "react-native-chart-kit";
 import { Picker } from "@react-native-picker/picker";
-import { supabase } from "../lib/supabase"; // ✅ Your Supabase connection
+import { supabase } from "../lib/supabase";
 
 export default function AnalyticsPage({ navigation }) {
   const [selectedRange, setSelectedRange] = useState("Week");
@@ -26,46 +26,61 @@ export default function AnalyticsPage({ navigation }) {
 
   const fetchRevenueData = async (range) => {
     setLoading(true);
-    const { data, error } = await supabase.from("members").select("createdAt, walkinpayment");
+
+    // ✅ Calculate date range: current + previous month
+    const now = new Date();
+    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const { data, error } = await supabase
+      .from("all_services_table")
+      .select("record_id, price, created_at")
+      .gte("created_at", startOfPrevMonth.toISOString())
+      .lte("created_at", endOfCurrentMonth.toISOString());
 
     if (error) {
-      console.error("Supabase error:", error);
+      console.error("❌ Supabase error:", error);
       setLoading(false);
       return;
     }
 
-    const grouped = groupDataByRange(data, range);
+    // ✅ Filter unique record_id to avoid duplicates
+    const uniqueData = Array.from(
+      new Map(data.map((item) => [item.record_id, item])).values()
+    );
+
+    const grouped = groupDataByRange(uniqueData, range);
     setBarData({
       labels: grouped.labels,
       datasets: [{ data: grouped.values }],
     });
+
     setLoading(false);
   };
 
   const groupDataByRange = (data, range) => {
     const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
     const result = {};
-    const now = new Date();
 
     data.forEach((item) => {
-      const createdAt = new Date(item.createdAt);
-      const payment = item.walkinpayment || 0;
+      if (!item.created_at) return;
+      const createdAt = new Date(item.created_at);
+      const price = Number(item.price) || 0;
 
       if (range === "Week") {
         const dayName = createdAt.toLocaleDateString("en-US", { weekday: "short" });
-        result[dayName] = (result[dayName] || 0) + payment;
+        result[dayName] = (result[dayName] || 0) + price;
       } else if (range === "Monthly") {
         const monthName = createdAt.toLocaleDateString("en-US", { month: "short" });
-        result[monthName] = (result[monthName] || 0) + payment;
+        result[monthName] = (result[monthName] || 0) + price;
       } else if (range === "Yearly") {
         const year = createdAt.getFullYear().toString();
-        result[year] = (result[year] || 0) + payment;
+        result[year] = (result[year] || 0) + price;
       }
     });
 
-    // Fill missing labels with 0
     if (range === "Week") {
       return {
         labels: weekdays,
@@ -77,7 +92,6 @@ export default function AnalyticsPage({ navigation }) {
         values: months.map((m) => result[m] || 0),
       };
     } else if (range === "Yearly") {
-      // Sort years ascending
       const years = Object.keys(result).sort();
       return {
         labels: years,
@@ -88,8 +102,6 @@ export default function AnalyticsPage({ navigation }) {
     return { labels: [], values: [] };
   };
 
-  // Dynamic chart configuration
-  const maxValue = Math.max(...(barData.datasets[0]?.data || [0]));
   const chartConfig = {
     backgroundGradientFrom: "#ffffff",
     backgroundGradientTo: "#ffffff",
@@ -99,11 +111,9 @@ export default function AnalyticsPage({ navigation }) {
     barPercentage: 0.6,
     propsForLabels: {
       fontSize: 10,
-      dy: 8, // lower the labels (y-position)
+      dy: 8,
     },
   };
-
-  
 
   return (
     <View style={styles.container}>
@@ -160,8 +170,6 @@ export default function AnalyticsPage({ navigation }) {
             />
           </ScrollView>
         )}
-
-        
       </ScrollView>
 
       {/* Navigation Bar */}

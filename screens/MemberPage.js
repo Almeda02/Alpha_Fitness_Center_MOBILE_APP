@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { PieChart } from "react-native-chart-kit";
-import { supabase } from "../lib/supabase"; // ✅ Your Supabase client
+import { supabase } from "../lib/supabase"; // ✅ Supabase client
 
 export default function MemberPage({ navigation }) {
   const [totalMembers, setTotalMembers] = useState(0);
@@ -15,79 +15,74 @@ export default function MemberPage({ navigation }) {
   }, []);
 
   const fetchMemberData = async () => {
-  try {
-    // ✅ Fetch total members
-    const { count, error } = await supabase
-      .from("members")
-      .select("*", { count: "exact", head: true });
+    try {
+      // ✅ Fetch unique members by record_id
+      const { data, error } = await supabase
+        .from("all_services_table")
+        .select("record_id, gymPlan, status, vip_status");
 
-    if (error) throw error;
-    setTotalMembers(count || 0);
+      if (error) throw error;
 
-    // ✅ Fetch only active members
-    const { count: activeCount, error: activeError } = await supabase
-      .from("members")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "ACTIVE");
+      // ✅ Remove duplicates by record_id
+      const uniqueMembers = Array.from(
+        new Map(data.map((m) => [m.record_id, m])).values()
+      );
 
-    if (activeError) throw activeError;
-    setActiveMembers(activeCount || 0);
+      // ✅ Count total unique members
+      setTotalMembers(uniqueMembers.length);
 
-    // ✅ Fetch all members with their gymPlan
-    const { data: members, error: gymPlanError } = await supabase
-      .from("members")
-      .select("gymPlan");
+      // ✅ Count only ACTIVE members
+      const activeCount = uniqueMembers.filter(
+        (m) => (m.status || "").toUpperCase() === "ACTIVE"
+      ).length;
+      setActiveMembers(activeCount);
 
-    if (gymPlanError) throw gymPlanError;
+      // ✅ Count each gymPlan type
+      let vipCount = 0;
+      let nonCount = 0;
+      let walkinCount = 0;
 
-    // ✅ Count each category
-    let vipCount = 0;
-    let nonCount = 0;
-    let walkinCount = 0;
+      uniqueMembers.forEach((m) => {
+        const plan = (m.gymPlan || "").toLowerCase().trim();
+        if (plan.includes("non") || plan === "non") {
+          nonCount++;
+        } else if (plan.includes("vip")) {
+          vipCount++;
+        } else if (plan.includes("walk")) {
+          walkinCount++;
+        }
+      });
 
-    members.forEach((m) => {
-      const plan = (m.gymPlan || "").toLowerCase().trim();
+      // ✅ Build chart data dynamically
+      const chartData = [
+        {
+          name: "VIP",
+          population: vipCount,
+          color: "#E63946",
+          legendFontColor: "#333",
+          legendFontSize: 12,
+        },
+        {
+          name: "Non-VIP",
+          population: nonCount,
+          color: "#5B5B5B",
+          legendFontColor: "#333",
+          legendFontSize: 12,
+        },
+        {
+          name: "Walk-in",
+          population: walkinCount,
+          color: "#F77F00",
+          legendFontColor: "#333",
+          legendFontSize: 12,
+        },
+      ];
 
-      if (plan.includes("non") || plan === "non" || plan === "non") {
-        nonCount++;
-      } else if (plan.includes("vip")) {
-        vipCount++;
-      } else if (plan.includes("walk")) {
-        walkinCount++;
-      }
-    });
-
-    // ✅ Build chart data dynamically
-    const chartData = [
-      {
-        name: "VIP",
-        population: vipCount,
-        color: "#E63946",
-        legendFontColor: "#333",
-        legendFontSize: 12,
-      },
-      {
-        name: "Non-VIP",
-        population: nonCount,
-        color: "#5B5B5B",
-        legendFontColor: "#333",
-        legendFontSize: 12,
-      },
-      {
-        name: "Walk-in",
-        population: walkinCount,
-        color: "#F77F00",
-        legendFontColor: "#333",
-        legendFontSize: 12,
-      },
-    ];
-
-    setPieData(chartData);
-  } catch (err) {
-    console.error("Error fetching member data:", err);
-  }
-};
-
+      setPieData(chartData);
+    } catch (err) {
+      console.error("❌ Error fetching member data:", err);
+    }
+  };
 
   const chartConfig = {
     backgroundGradientFrom: "#ffffff",
@@ -95,10 +90,7 @@ export default function MemberPage({ navigation }) {
     decimalPlaces: 0,
     color: (opacity = 1) => `rgba(230, 57, 70, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    propsForLabels: {
-      fontSize: 10,
-      dy: 8, // lowers labels
-    },
+    propsForLabels: { fontSize: 10, dy: 8 }, // lower labels
   };
 
   return (
@@ -187,127 +179,49 @@ export default function MemberPage({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
-
-  /* Header */
-  Header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 3,
-    marginTop: 30,
-  },
+  Header: { flexDirection: "row", alignItems: "center", padding: 3, marginTop: 30 },
   Logo: { marginRight: 10 },
-  AlphaFitness: {
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  AlphaFitnessText: {
-    color: "#fff",
-    textAlign: "center",
-    fontFamily: "RussoOne",
-  },
+  AlphaFitness: { flexDirection: "column", alignItems: "center", justifyContent: "center" },
+  AlphaFitnessText: { color: "#fff", textAlign: "center", fontFamily: "RussoOne" },
   AlphaFitnessRow: { flexDirection: "row", alignItems: "center" },
   OwnerDashboard: { flexDirection: "row", fontSize: 10 },
-
-  /* Section */
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 10,
-    fontFamily: "RussoOne",
-  },
-
-  /* Cards Row */
-  cardsRow: {
-   justifyContent: "space-between",
-    flexDirection: "row",
-    marginBottom: 20, 
-    
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 10, fontFamily: "RussoOne" },
+  cardsRow: { justifyContent: "space-between", flexDirection: "row", marginBottom: 20 },
   memberCard: {
     flexDirection: "row",
     backgroundColor: "#FFF",
     borderRadius: 10,
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#00000067',
+    borderColor: "#00000067",
     padding: 10,
-    
   },
-
-  memberCardColumn1: {
-    flexDirection: "column",
-    alignItems: "center",
-  },
-  memberCardColumn2: {
-    flexDirection: "column",
-    alignItems: "center",
-    marginTop: 10,
-    
-  },
+  memberCardColumn2: { flexDirection: "column", alignItems: "center", marginTop: 10 },
   cardIcon: { marginRight: 10 },
-  cardLabel: { fontSize: 12.5, color: "#444",fontFamily: "Calibribold" },
+  cardLabel: { fontSize: 12.5, color: "#444", fontFamily: "Calibribold" },
   cardValue: { fontSize: 16, fontWeight: "bold" },
-  cardGrowth: { fontSize: 12, color: "#22C55E", marginTop: 10, fontFamily: "AROneSansSemiBold" },
-
-
-  /* Activity Section */
   activityCard: {
-    
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#00000067",
     padding: 10,
-    backgroundColor: '#FFF',
-    borderRadius: 20,
+    backgroundColor: "#FFF",
     elevation: 5,
-    borderWidth: 1,
   },
-  activityTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 15,
-    textAlign: "center",
-    fontFamily: "RussoOne",
-  },
-  activityRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    elevation: 10,
-    borderWidth: 0,
-    borderColor: '#00000067',
-    padding: 10,
-    paddingHorizontal: 20,
-    margin: 10,
-    
-  },
-  activityLabel: { fontSize: 13, color: "#444" },
-  activityValue: { fontSize: 13, fontWeight: "bold" },
-
-  /* Navigation */
+  activityTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 15, textAlign: "center", fontFamily: "RussoOne" },
   navigation: {
     position: "absolute",
     bottom: 15,
     right: 10,
     left: 10,
-    zIndex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     backgroundColor: "#fff",
-    borderWidth: 0,
-    borderColor: "#00000067",
     borderRadius: 30,
     padding: 10,
     borderWidth: 1,
+    borderColor: "#00000067",
   },
   navigationButton: { justifyContent: "center", alignItems: "center" },
-  navigationText: {
-    marginTop: 10,
-    fontSize: 10,
-    color: "#0000007c",
-    textAlign: "center",
-    fontFamily: "RussoOne",
-  },
+  navigationText: { marginTop: 10, fontSize: 10, color: "#0000007c", textAlign: "center", fontFamily: "RussoOne" },
 });

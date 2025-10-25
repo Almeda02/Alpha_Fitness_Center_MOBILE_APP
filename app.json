@@ -20,13 +20,21 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.alpha_fitness04.Aplha_Fitness",
+      "versionCode": 1,
+      "gradleProperties": {
+        "expo.kotlin.version": "1.9.24"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-font"
-    ]
+    "plugins": ["expo-font"],
+    "extra": {
+      "eas": {
+        "projectId": "562d5550-5f12-4640-99cc-ecfe27add64b"
+      }
+    }
   }
 }

@@ -10,20 +10,20 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
-import { supabase } from "../lib/supabase"; // ✅ make sure path is correct
+import { supabase } from "../lib/supabase"; // ✅ ensure path is correct
 
 export default function Transaction({ navigation }) {
   const [transactions, setTransactions] = useState([]);
-  const [totalPaid, setTotalPaid] = useState(0); // ✅ new state for paid sum
+  const [totalPaid, setTotalPaid] = useState(0);
   const [selectedStatus, setSelectedStatus] = useState("Status");
   const [search, setSearch] = useState("");
 
-  // ✅ Fetch transactions from Supabase
+  // ✅ Fetch data from the all_services view
   const fetchTransactions = async () => {
     const { data, error } = await supabase
-      .from("members")
+      .from("all_services")
       .select(
-        "id, fullname, vip_status, paymentstatus, createdAt, walkinpayment"
+        "record_id, fullname, vip_status, payment_status, price, created_at, source"
       );
 
     if (error) {
@@ -31,43 +31,42 @@ export default function Transaction({ navigation }) {
       return;
     }
 
-    // ✅ Format for display
     const formatted = data.map((item) => ({
-      id: item.id,
-      name: item.fullname,
+      id: item.record_id,
+      name: item.fullname || item.source.toUpperCase(),
       membership: item.vip_status || "N/A",
-      price: `₱${item.walkinpayment || 0}`,
-      date: new Date(item.createdAt).toLocaleDateString(),
-      status:
-        item.paymentstatus?.charAt(0).toUpperCase() +
-        item.paymentstatus?.slice(1),
+      price: `₱${item.price || 0}`,
+      date: new Date(item.created_at).toLocaleDateString(),
+      status: item.payment_status
+        ? item.payment_status.toUpperCase()
+        : "UNKNOWN",
+      source: item.source,
     }));
 
     setTransactions(formatted);
 
-    // ✅ Compute total sum for "Paid" status
+    // ✅ Compute today's total paid revenue
     const today = new Date().toISOString().split("T")[0];
-    const todayRevenueSum = data
+    const todayRevenue = data
       .filter(
         (item) =>
-          item.paymentstatus &&
-          item.paymentstatus.toLowerCase() === "paid" &&
-          item.createdAt.split("T")[0] === today
+          item.payment_status &&
+          item.payment_status.toLowerCase() === "paid" &&
+          item.created_at.split("T")[0] === today
       )
-      .reduce((sum, item) => sum + (item.walkinpayment || 0), 0);
-
-    setTotalPaid(todayRevenueSum);
+      .reduce((sum, item) => sum + (item.price || 0), 0);
+    setTotalPaid(todayRevenue);
   };
 
   useEffect(() => {
     fetchTransactions();
 
-    // ✅ Real-time updates from Supabase
+    // ✅ Real-time listener
     const subscription = supabase
-      .channel("members-changes")
+      .channel("all-services-changes")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "members" },
+        { event: "*", schema: "public", table: "all_services" },
         () => fetchTransactions()
       )
       .subscribe();
@@ -77,33 +76,35 @@ export default function Transaction({ navigation }) {
     };
   }, []);
 
-  // ✅ Summary calculation
-  const totalRevenue = transactions.reduce(
-    (sum, t) => sum + parseFloat(t.price.replace(/[₱,]/g, "")),
-    0
-  );
+  // ✅ Summary counts
   const completedCount = transactions.filter(
-    (t) => t.status?.toLowerCase().includes("paid")
+    (t) => t.status === "PAID"
   ).length;
   const pendingCount = transactions.filter(
-    (t) => t.status?.toLowerCase().includes("pending")
+    (t) => t.status === "PENDING"
   ).length;
+  
 
   // ✅ Filtering logic
   const filteredTransactions = transactions.filter((t) => {
     const matchesStatus =
-      selectedStatus === "Status" || t.status === selectedStatus;
-    const matchesSearch = t.name.toLowerCase().includes(search.toLowerCase());
+      selectedStatus === "Status" ||
+      t.status.toLowerCase() === selectedStatus.toLowerCase();
+    const matchesSearch = t.name
+      ? t.name.toLowerCase().includes(search.toLowerCase())
+      : false;
     return matchesStatus && matchesSearch;
   });
 
-  // ✅ Render card
+  // ✅ Render each card
   const renderTransaction = ({ item }) => (
     <View style={styles.card}>
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         <View>
           <Text style={styles.cardName}>{item.name}</Text>
-          <Text style={styles.cardMembership}>{item.membership}</Text>
+          <Text style={styles.cardMembership}>
+            {item.membership} ({item.source})
+          </Text>
           <Text style={styles.cardDate}>{item.date}</Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
@@ -113,14 +114,25 @@ export default function Transaction({ navigation }) {
               styles.statusBadge,
               item.status === "PAID"
                 ? { backgroundColor: "#d1f5d3" }
-                : { backgroundColor: "#fbe4b4" },
+                : item.status === "PENDING"
+                ? { backgroundColor: "#fbe4b4" }
+                : item.status === "ACTIVE"
+                ? { backgroundColor: "#b4e1fb" }
+                : { backgroundColor: "#e0e0e0" },
             ]}
           >
             <Text
               style={{
                 fontSize: 12,
                 fontWeight: "600",
-                color: item.status === "PAID" ? "#2d8a42" : "#8a6d2d",
+                color:
+                  item.status === "PAID"
+                    ? "#2d8a42"
+                    : item.status === "PENDING"
+                    ? "#8a6d2d"
+                    : item.status === "ACTIVE"
+                    ? "#1d4e89"
+                    : "#555",
               }}
             >
               {item.status}
@@ -166,7 +178,7 @@ export default function Transaction({ navigation }) {
       <Text style={styles.TransactionTitle}>Transactions</Text>
       <View style={styles.summaryRow}>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Todays Paid Revenue:</Text>
+          <Text style={styles.summaryTitle}>Today's Paid Revenue:</Text>
           <Text style={styles.summaryValue}>₱{totalPaid.toLocaleString()}</Text>
         </View>
         <View style={[styles.summaryCard, { backgroundColor: "#d1f5d3" }]}>
@@ -181,25 +193,25 @@ export default function Transaction({ navigation }) {
           </Text>
           <Text style={styles.summaryTitle}>Pending</Text>
         </View>
+        
       </View>
 
       {/* Filters */}
       <View style={styles.filterRow}>
         <TouchableOpacity
           style={styles.filterDropdown}
-          onPress={() =>
-            setSelectedStatus(
-              selectedStatus === "PAID"
-                ? "PENDING"
-                : selectedStatus === "PENDING"
-                ? "Status"
-                : "PAID"
-            )
-          }
+          onPress={() => {
+            // ✅ Cycle through Status → PAID → PENDING → ACTIVE → Status
+            if (selectedStatus === "Status") setSelectedStatus("PAID");
+            else if (selectedStatus === "PAID") setSelectedStatus("PENDING");
+            else if (selectedStatus === "PENDING") setSelectedStatus("ACTIVE");
+            else setSelectedStatus("Status");
+          }}
         >
           <Text style={{ color: "#000" }}>{selectedStatus}</Text>
           <Icon name="chevron-down" size={16} color="#000" />
         </TouchableOpacity>
+
         <View style={styles.searchBox}>
           <Icon name="search" size={16} color="#aaa" style={{ marginRight: 6 }} />
           <TextInput
@@ -231,6 +243,7 @@ export default function Transaction({ navigation }) {
           />
           <Text style={styles.navigationText}>Dashboard</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navigationButton}
           onPress={() => navigation.navigate("Transactions")}
@@ -243,6 +256,7 @@ export default function Transaction({ navigation }) {
             Transactions
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navigationButton}
           onPress={() => navigation.navigate("Analytics")}
@@ -253,6 +267,7 @@ export default function Transaction({ navigation }) {
           />
           <Text style={styles.navigationText}>Analytics</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navigationButton}
           onPress={() => navigation.navigate("Members")}
